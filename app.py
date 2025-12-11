@@ -1,6 +1,6 @@
 # ============================================
-# HERO IA - Version Finale Complète
-# Audio + Transcription + Images Hugging Face
+# HERO IA - Application Finale
+# Images dans historique + Bouton Sauvegarder
 # ============================================
 
 import streamlit as st
@@ -22,8 +22,8 @@ from game_agent import GameAgent, GameResponse
 AUDIO_OK = False
 AudioManager = None
 try:
-    from audio_manager import AudioManager as AM, ELEVENLABS_OK
-    if ELEVENLABS_OK:
+    from audio_manager import AudioManager as AM, GTTS_OK
+    if GTTS_OK:
         AudioManager = AM
         AUDIO_OK = True
 except:
@@ -80,16 +80,15 @@ def init_state():
         'hp': 20,
         'hp_max': 20,
         'inventory': [],
-        'history': [],
+        'history': [],  # Maintenant contient {'content': str, 'narrator': bool, 'image': str ou None}
         'actions': [],
         'scene': '',
         'game_theme': None,
         'audio_mgr': None,
         'voice_mode': False,
-        'voice_key': 'adam',
+        'voice_key': 'fr',
         'audio_to_play': None,
         'image_gen': None,
-        'current_image': None,
         'images_enabled': True,
         'mic_counter': 0,
         'last_audio_id': None,
@@ -134,6 +133,7 @@ def load_css():
         .stApp {{ background: var(--bg); }}
         #MainMenu, footer, header {{ visibility: hidden; }}
         
+        /* Narrateur */
         .narrator {{
             background: var(--card);
             border-left: 4px solid var(--accent);
@@ -146,6 +146,7 @@ def load_css():
         .narrator p {{ margin-bottom: 1rem; }}
         .narrator p:last-child {{ margin-bottom: 0; }}
         
+        /* Joueur */
         .player {{
             background: rgba(139, 92, 246, 0.1);
             border-left: 4px solid var(--accent2);
@@ -155,6 +156,7 @@ def load_css():
             color: var(--text2);
         }}
         
+        /* Badge scène */
         .scene-badge {{
             display: inline-block;
             background: rgba(139, 92, 246, 0.12);
@@ -166,6 +168,7 @@ def load_css():
             margin-bottom: 1rem;
         }}
         
+        /* Section title */
         .section-title {{
             font-size: 0.7rem;
             font-weight: 600;
@@ -175,6 +178,7 @@ def load_css():
             margin-bottom: 0.5rem;
         }}
         
+        /* HP */
         .hp-box {{
             background: var(--card);
             border-radius: 12px;
@@ -199,6 +203,7 @@ def load_css():
         @keyframes pulse {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.6; }} }}
         .hp-label {{ text-align: center; margin-top: 0.5rem; font-weight: 600; }}
         
+        /* Inventaire */
         .inv-item {{
             background: var(--bg2);
             border-left: 3px solid var(--accent);
@@ -209,6 +214,7 @@ def load_css():
             color: var(--text);
         }}
         
+        /* Theme cards */
         .theme-card {{
             background: var(--card);
             border: 1px solid var(--muted);
@@ -221,16 +227,37 @@ def load_css():
         .theme-name {{ font-weight: 600; color: var(--text); }}
         .theme-desc {{ font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem; }}
         
-        .scene-image {{
-            width: 100%;
-            max-height: 400px;
-            object-fit: cover;
-            border-radius: 16px;
+        /* ========================================
+           IMAGE SIDEBAR (Side-by-Side)
+           ======================================== */
+        
+        .image-sidebar {{
+            position: sticky;
+            top: 20px;
+            padding: 8px;
+            background: var(--card);
             border: 2px solid var(--accent);
-            margin: 20px 0;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }}
         
+        .sidebar-image {{
+            width: 100%;
+            height: auto;
+            max-height: 400px;
+            object-fit: cover;
+            border-radius: 8px;
+            display: block;
+        }}
+        
+        /* Responsive : si écran petit, empile verticalement */
+        @media (max-width: 768px) {{
+            .sidebar-image {{
+                max-height: 250px;
+            }}
+        }}
+        
+        /* Zone micro */
         .mic-zone {{
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%);
             border: 2px dashed rgba(139, 92, 246, 0.3);
@@ -240,16 +267,22 @@ def load_css():
             text-align: center;
         }}
         
-        .image-loading {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            background: var(--card);
-            border-radius: 16px;
-            border: 2px dashed var(--accent);
-            margin: 20px 0;
-            color: var(--muted);
+        /* Save success */
+        .save-success {{
+            background: rgba(34, 197, 94, 0.15);
+            border: 2px solid #22c55e;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+            color: #22c55e;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease-in;
+        }}
+        
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(-10px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
         }}
     </style>
     """, unsafe_allow_html=True)
@@ -314,21 +347,17 @@ def transcribe(audio_bytes: bytes) -> Optional[str]:
 # IMAGE
 # ============================================
 
-def generate_image(prompt: str, theme_id: str = None):
-    """Génère une image pour la scène."""
-    if not st.session_state.images_enabled:
-        return
-    if not st.session_state.image_gen:
-        return
+def generate_image(prompt: str, theme_id: str = None) -> Optional[str]:
+    """Génère une image et retourne le base64."""
+    if not st.session_state.images_enabled or not st.session_state.image_gen:
+        return None
     if not prompt or len(prompt.strip()) < 5:
-        return
-    
+        return None
     try:
         gen = st.session_state.image_gen
-        
-        # Adapte le style au thème
         if theme_id:
             style_map = {
+                "orient_express": "fantasy",
                 "egypt": "ancient",
                 "space": "space",
                 "manor": "victorian",
@@ -336,30 +365,19 @@ def generate_image(prompt: str, theme_id: str = None):
                 "submarine": "dark",
             }
             gen.set_style(style_map.get(theme_id, "fantasy"))
-        
         result = gen.generate_image(prompt)
-        
         if result.success and result.image_base64:
-            st.session_state.current_image = result.image_base64
-    except Exception as e:
-        print(f"Image error: {e}")
-
-
-def show_image():
-    """Affiche l'image de scène."""
-    if not st.session_state.images_enabled:
-        return
-    if not st.session_state.current_image:
-        return
-    
-    st.markdown(f'''
-    <img src="data:image/png;base64,{st.session_state.current_image}" 
-         class="scene-image" 
-         alt="Illustration de la scène" />
-    ''', unsafe_allow_html=True)
+            return result.image_base64
+    except:
+        pass
+    return None
 
 # ============================================
 # UI COMPONENTS
+# ============================================
+
+# ============================================
+# UI COMPONENTS (Mise à jour Side-by-Side)
 # ============================================
 
 def show_hp():
@@ -385,16 +403,42 @@ def show_inv():
         st.caption("Vide")
 
 
-def show_narrator(content: str):
-    st.markdown(f'<div class="narrator">{fmt_story(content)}</div>', unsafe_allow_html=True)
+def show_narrator(content: str, image_b64: Optional[str] = None):
+    """
+    Affiche le message du narrateur avec image optionnelle en side-by-side.
+    
+    - Si image présente : colonnes [3, 1] (texte à gauche, image à droite)
+    - Si pas d'image : texte sur toute la largeur
+    """
+    if image_b64:
+        # Mode Side-by-Side avec colonnes
+        col_text, col_img = st.columns([3, 1])
+        
+        with col_text:
+            st.markdown(f'<div class="narrator">{fmt_story(content)}</div>', unsafe_allow_html=True)
+        
+        with col_img:
+            st.markdown(f"""
+            <div class="image-sidebar">
+                <img src="data:image/png;base64,{image_b64}" class="sidebar-image" alt="Illustration" />
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        # Mode pleine largeur sans image
+        st.markdown(f'<div class="narrator">{fmt_story(content)}</div>', unsafe_allow_html=True)
 
 
 def show_player(content: str):
     st.markdown(f'<div class="player"><strong>⚔️ Vous:</strong> {content}</div>', unsafe_allow_html=True)
 
 
-def add_msg(content: str, narrator: bool = True):
-    st.session_state.history.append({'content': content, 'narrator': narrator})
+def add_msg(content: str, narrator: bool = True, image_b64: Optional[str] = None):
+    """Ajoute un message à l'historique avec image optionnelle."""
+    st.session_state.history.append({
+        'content': content,
+        'narrator': narrator,
+        'image': image_b64
+    })
 
 # ============================================
 # SIDEBAR
@@ -404,7 +448,7 @@ def show_voice_controls():
     st.markdown('<div class="section-title">🎙️ Mode Vocal</div>', unsafe_allow_html=True)
     
     if not AUDIO_OK:
-        st.warning("⚠️ ElevenLabs non configuré")
+        st.warning("⚠️ Audio non configuré")
         return
     if not MIC_OK:
         st.warning("⚠️ Micro non disponible")
@@ -415,9 +459,8 @@ def show_voice_controls():
         st.session_state.voice_mode = voice_on
         st.rerun()
     
-    if st.session_state.voice_mode:
-        if VOICE_UI_OK:
-            show_voice_mode_badge(True)
+    if st.session_state.voice_mode and VOICE_UI_OK:
+        show_voice_mode_badge(True)
         
         voices = AudioManager.get_voices()
         names = [v["name"] for v in voices]
@@ -435,19 +478,16 @@ def show_voice_controls():
 
 
 def show_image_controls():
-    st.markdown('<div class="section-title">🖼️ Images IA</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🖼️ Images</div>', unsafe_allow_html=True)
     
     if not IMAGE_OK:
-        st.caption("⚠️ Hugging Face non configuré")
+        st.caption("⚠️ Images non configurées")
         return
     
     img_on = st.toggle("Générer images", value=st.session_state.images_enabled, key="img_toggle")
     if img_on != st.session_state.images_enabled:
         st.session_state.images_enabled = img_on
         st.rerun()
-    
-    if st.session_state.images_enabled:
-        st.caption("✅ Images activées")
     
     st.markdown("---")
 
@@ -475,6 +515,20 @@ def show_sidebar():
             color:{theme.accent_primary}; margin-bottom:15px;">⚔️ HERO IA</div>
         """, unsafe_allow_html=True)
         
+        # BOUTON SAUVEGARDER (démo)
+        if st.session_state.game_active:
+            if st.button("💾 Sauvegarder", use_container_width=True, type="primary"):
+                st.session_state['save_message'] = True
+                st.rerun()
+            
+            # Message de sauvegarde
+            if st.session_state.get('save_message'):
+                st.markdown('<div class="save-success">✅ Partie sauvegardée !</div>', unsafe_allow_html=True)
+                time.sleep(2)
+                st.session_state['save_message'] = False
+        
+        st.markdown("---")
+        
         show_voice_controls()
         show_image_controls()
         show_theme_selector()
@@ -495,7 +549,7 @@ def show_sidebar():
         if AUDIO_OK: status.append("🔊")
         if IMAGE_OK: status.append("🖼️")
         if MIC_OK: status.append("🎤")
-        st.caption(f"v11 Final • {' '.join(status)}")
+        st.caption(f"v12 Final • {' '.join(status)}")
 
 # ============================================
 # GAME LOGIC
@@ -522,18 +576,30 @@ def start_game(theme: GameTheme):
         stats = agent.roll_initial_stats()
         st.session_state.hp = stats['hp']
         st.session_state.hp_max = stats['hp_max']
-        st.session_state.inventory = list(GameConfig.DEFAULT_INVENTORY)
+        
+        # Utilise l'inventaire personnalisé du thème
+        initial_inv = theme.custom_inventory or list(GameConfig.DEFAULT_INVENTORY)
+        st.session_state.inventory = list(initial_inv)
+        
         st.session_state.history = []
         st.session_state.game_theme = theme
         st.session_state.audio_to_play = None
-        st.session_state.current_image = None
         st.session_state.mic_counter = 0
         st.session_state.last_audio_id = None
         
-        response = agent.initiate_game(theme, st.session_state.inventory)
+        response = agent.initiate_game(theme, initial_inv)
         
         if not response.is_error:
-            add_msg(response.story, True)
+            # Génère l'image
+            img_b64 = None
+            if st.session_state.images_enabled and IMAGE_OK:
+                prompt = getattr(response, 'image_prompt', None) or response.scene_description
+                with st.spinner("🎨 Génération..."):
+                    img_b64 = generate_image(prompt, theme.id)
+            
+            # Ajoute avec l'image
+            add_msg(response.story, True, img_b64)
+            
             st.session_state.actions = response.suggested_actions
             st.session_state.scene = response.scene_description
             st.session_state.game_active = True
@@ -541,15 +607,7 @@ def start_game(theme: GameTheme):
             st.session_state.victory = False
             
             apply_inv(response)
-            
-            # Audio
             speak(response.story)
-            
-            # Image (génération au démarrage)
-            if st.session_state.images_enabled and IMAGE_OK:
-                prompt = getattr(response, 'image_prompt', None) or response.scene_description
-                with st.spinner("🎨 Génération de l'image..."):
-                    generate_image(prompt, theme.id)
         else:
             st.error(response.error_message)
     except Exception as e:
@@ -560,7 +618,9 @@ def do_action(action: str, suggested: bool = False):
     if not st.session_state.agent or not st.session_state.game_active:
         return
     
-    add_msg(action, False)
+    # Ajoute l'action du joueur (sans image)
+    add_msg(action, False, None)
+    
     inv = list(st.session_state.inventory)
     
     if suggested:
@@ -569,7 +629,14 @@ def do_action(action: str, suggested: bool = False):
         response = st.session_state.agent.step(action, inv)
     
     if not response.is_error:
-        add_msg(response.story, True)
+        # Génère l'image
+        img_b64 = None
+        if st.session_state.images_enabled and IMAGE_OK:
+            prompt = getattr(response, 'image_prompt', None) or response.scene_description
+            img_b64 = generate_image(prompt, st.session_state.game_theme.id if st.session_state.game_theme else None)
+        
+        # Ajoute la réponse du narrateur avec l'image
+        add_msg(response.story, True, img_b64)
         
         if response.hp_change:
             st.session_state.hp = clamp(st.session_state.hp + response.hp_change, 0, st.session_state.hp_max)
@@ -581,13 +648,7 @@ def do_action(action: str, suggested: bool = False):
         st.session_state.scene = response.scene_description
         st.session_state.mic_counter += 1
         
-        # Audio
         speak(response.story)
-        
-        # Image (génération à chaque action)
-        if st.session_state.images_enabled and IMAGE_OK:
-            prompt = getattr(response, 'image_prompt', None) or response.scene_description
-            generate_image(prompt, st.session_state.game_theme.id if st.session_state.game_theme else None)
         
         if response.game_status == "lost" or st.session_state.hp <= 0:
             st.session_state.game_over = True
@@ -612,7 +673,6 @@ def reset_game():
     st.session_state.scene = ''
     st.session_state.game_theme = None
     st.session_state.audio_to_play = None
-    st.session_state.current_image = None
     st.session_state.mic_counter = 0
     st.session_state.last_audio_id = None
 
@@ -661,42 +721,32 @@ def screen_welcome():
 
 
 def screen_game():
-    """Écran de jeu principal."""
-    
-    # 1. Badge scène
+    # Badge scène
     if st.session_state.scene:
         st.markdown(f'<div class="scene-badge">🎬 {st.session_state.scene}</div>', unsafe_allow_html=True)
     
-    # 2. Audio du narrateur
+    # Audio
     play_audio()
     
-    # 3. Historique des messages avec image intégrée
-    history = st.session_state.history
-    
-    for i, msg in enumerate(history):
+    # Historique avec images intégrées
+    for msg in st.session_state.history:
         if msg['narrator']:
-            show_narrator(msg['content'])
-            
-            # Affiche l'image APRÈS le dernier message du narrateur
-            if i == len(history) - 1 and st.session_state.current_image:
-                show_image()
+            show_narrator(msg['content'], msg.get('image'))
         else:
             show_player(msg['content'])
     
     st.markdown("---")
     
-    # 4. Check blocage
     agent = st.session_state.agent
     blocked = agent.is_blocked if agent else False
     if blocked:
         st.warning(SystemMessages.BLOCKED_WARNING)
     
-    # 5. Zone Vocale
+    # Zone Vocale
     if st.session_state.voice_mode and MIC_OK and not blocked:
         st.markdown("### 🎤 Commande Vocale")
-        
         st.markdown('<div class="mic-zone">', unsafe_allow_html=True)
-        st.caption("Cliquez pour parler, puis cliquez pour envoyer")
+        st.caption("Cliquez pour parler")
         
         mic_key = f"mic_{st.session_state.mic_counter}"
         audio = mic_recorder(
@@ -723,21 +773,14 @@ def screen_game():
                     else:
                         st.success(f'🎤 "{text}"')
                     time.sleep(0.3)
-                    
-                    # Génère l'image avec spinner
-                    if st.session_state.images_enabled and IMAGE_OK:
-                        with st.spinner("🎨 Génération de l'image..."):
-                            do_action(text, suggested=False)
-                    else:
-                        do_action(text, suggested=False)
-                    
+                    do_action(text, suggested=False)
                     st.rerun()
                 else:
                     st.error("❌ Transcription échouée")
         
         st.markdown("---")
     
-    # 6. Actions suggérées
+    # Actions
     st.markdown("### 🎯 Actions")
     actions = st.session_state.actions
     if actions:
@@ -745,25 +788,17 @@ def screen_game():
         for i, act in enumerate(actions[:4]):
             with cols[i % 2]:
                 if st.button(f"→ {act}", key=f"act_{i}_{st.session_state.mic_counter}", use_container_width=True):
-                    if st.session_state.images_enabled and IMAGE_OK:
-                        with st.spinner("🎨 Génération de l'image..."):
-                            do_action(act, suggested=True)
-                    else:
-                        do_action(act, suggested=True)
+                    do_action(act, suggested=True)
                     st.rerun()
     
     st.markdown("---")
     
-    # 7. Input texte
+    # Input texte
     if not blocked:
         st.markdown("### ✍️ Taper")
         user_input = st.chat_input("Que faites-vous ?")
         if user_input:
-            if st.session_state.images_enabled and IMAGE_OK:
-                with st.spinner("🎨 Génération de l'image..."):
-                    do_action(user_input, suggested=False)
-            else:
-                do_action(user_input, suggested=False)
+            do_action(user_input, suggested=False)
             st.rerun()
 
 
@@ -775,11 +810,8 @@ def screen_gameover():
     </div>
     """, unsafe_allow_html=True)
     
-    # Dernière image
-    show_image()
-    
     if st.session_state.voice_mode and not st.session_state.audio_to_play:
-        speak("Game Over. Votre aventure s'achève ici.")
+        speak("Game Over.")
     play_audio()
     
     c1, c2, c3 = st.columns([1, 2, 1])
@@ -797,11 +829,8 @@ def screen_victory():
     </div>
     """, unsafe_allow_html=True)
     
-    # Dernière image
-    show_image()
-    
     if st.session_state.voice_mode and not st.session_state.audio_to_play:
-        speak("Victoire ! Vous avez accompli votre quête avec brio !")
+        speak("Victoire !")
     play_audio()
     
     c1, c2, c3 = st.columns([1, 2, 1])

@@ -182,13 +182,13 @@ class GameAgent:
             'roll_details': roll_result
         }
     
-    def initiate_game(self, theme: GameTheme, initial_inventory: List[str]) -> GameResponse:
+    def initiate_game(self, theme: GameTheme, initial_inventory: List[str] = None) -> GameResponse:
         """
         Démarre une nouvelle partie avec le thème choisi.
         
         Args:
             theme: Le GameTheme sélectionné
-            initial_inventory: Liste des objets de départ
+            initial_inventory: Liste des objets de départ (optionnel)
             
         Returns:
             GameResponse: La réponse initiale du jeu
@@ -199,10 +199,14 @@ class GameAgent:
         self.is_blocked = False
         self.game_started = True
         
+        # Utilise l'inventaire personnalisé du thème si disponible
+        if initial_inventory is None:
+            initial_inventory = theme.custom_inventory or list(GameConfig.DEFAULT_INVENTORY)
+        
         # Formate l'inventaire pour l'IA
         inventory_str = self._format_inventory_for_ai(initial_inventory)
         
-        # Construit le message initial avec le contexte du thème
+        # Message initial
         initial_message = f"""NOUVEAU JEU - THÈME: {theme.name}
 
 CONTEXTE DE DÉPART:
@@ -220,13 +224,11 @@ Génère maintenant l'introduction immersive du jeu.
 Réponds avec type: "init" pour ce premier message.
 Plante le décor, mentionne ce que le joueur a sur lui, crée de l'intrigue, et propose 4 premières actions."""
 
-        # Ajoute le system prompt et le contexte
         self.conversation_history = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": initial_message}
         ]
         
-        # Appelle l'API
         return self._call_api()
     
     def step(self, user_input: str, current_inventory: List[str]) -> GameResponse:

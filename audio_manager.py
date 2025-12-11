@@ -1,45 +1,54 @@
 # ============================================
-# HERO IA - Audio Manager (TTS + STT)
-# ElevenLabs - Version Corrigée
+# HERO IA - Audio Manager (Version Stable)
+# TTS : gTTS (Google - Simple & Gratuit)
+# STT : Groq Whisper (Fonctionne déjà ✅)
 # ============================================
 
 import os
 import io
 import re
+import tempfile
 from pathlib import Path
 from typing import Optional, Dict, List
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
-# Charge le .env
+# Charge .env
 env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
 # ============================================
-# VÉRIFICATION ELEVENLABS
+# VÉRIFICATION DES SERVICES
 # ============================================
 
-ELEVENLABS_OK = False
-elevenlabs_client = None
-
+# gTTS (Google TTS)
+GTTS_OK = False
 try:
-    from elevenlabs.client import ElevenLabs
-    from elevenlabs import VoiceSettings
-    
-    api_key = os.getenv("ELEVEN_LABS_KEY")
-    
-    if api_key:
-        elevenlabs_client = ElevenLabs(api_key=api_key)
-        ELEVENLABS_OK = True
-        print("✅ ElevenLabs (TTS/STT) configuré")
-    else:
-        print("⚠️ ELEVEN_LABS_KEY manquante dans .env")
-        
+    from gtts import gTTS
+    GTTS_OK = True
+    print("✅ gTTS (Google TTS - Gratuit) configuré")
 except ImportError:
-    print("⚠️ ElevenLabs non installé : pip install elevenlabs")
-except Exception as e:
-    print(f"⚠️ Erreur ElevenLabs : {e}")
+    print("⚠️ gTTS non installé : pip install gtts")
+
+# Groq Whisper (STT)
+GROQ_OK = False
+groq_client = None
+try:
+    from groq import Groq
+    
+    api_key = os.getenv("GROQ_API_KEY")
+    if api_key:
+        groq_client = Groq(api_key=api_key)
+        GROQ_OK = True
+        print("✅ Groq Whisper (STT) configuré")
+    else:
+        print("⚠️ GROQ_API_KEY manquante")
+except ImportError:
+    print("⚠️ groq non installé : pip install groq")
+
+# Pour compatibilité avec app.py
+ELEVENLABS_OK = GTTS_OK and GROQ_OK
 
 
 # ============================================
@@ -55,29 +64,25 @@ class AudioResult:
 
 
 # ============================================
-# VOIX DISPONIBLES
+# VOIX gTTS (Accents Français)
 # ============================================
 
 VOICE_OPTIONS = {
-    "adam": {
-        "name": "Adam (Narrateur)",
-        "id": "pNInz6obpgDQGcFmaJgB"
+    "fr": {
+        "name": "Français (France)",
+        "lang": "fr",
+        "tld": "fr"
     },
-    "arnold": {
-        "name": "Arnold (Grave)",
-        "id": "VR6AewLTigWG4xSOukaG"
+    "fr_slow": {
+        "name": "Français Lent",
+        "lang": "fr",
+        "tld": "fr",
+        "slow": True
     },
-    "bella": {
-        "name": "Bella (Féminin)",
-        "id": "EXAVITQu4vr4xnSDxMaL"
-    },
-    "josh": {
-        "name": "Josh (Dynamique)",
-        "id": "TxGEqnHWrfWFTfGW9XjX"
-    },
-    "rachel": {
-        "name": "Rachel (Doux)",
-        "id": "21m00Tcm4TlvDq8ikWAM"
+    "fr_ca": {
+        "name": "Français (Canada)",
+        "lang": "fr",
+        "tld": "ca"
     },
 }
 
@@ -87,20 +92,23 @@ VOICE_OPTIONS = {
 # ============================================
 
 class AudioManager:
-    """Gestionnaire Audio - TTS et STT via ElevenLabs."""
+    """
+    Gestionnaire Audio Stable
+    - TTS : gTTS (Google, gratuit, simple)
+    - STT : Groq Whisper (fonctionne déjà ✅)
+    """
     
     def __init__(self):
-        if not ELEVENLABS_OK:
-            raise ImportError("ElevenLabs non configuré")
+        if not GTTS_OK:
+            raise ImportError("gTTS non installé : pip install gtts")
+        if not GROQ_OK:
+            raise ImportError("Groq non configuré")
         
-        self.client = elevenlabs_client
-        self.voice_id = VOICE_OPTIONS["adam"]["id"]
-        self.voice_key = "adam"
+        self.voice_key = "fr"
         self._cache: Dict[str, bytes] = {}
     
     def set_voice(self, key: str) -> bool:
         if key in VOICE_OPTIONS:
-            self.voice_id = VOICE_OPTIONS[key]["id"]
             self.voice_key = key
             return True
         return False
@@ -113,13 +121,13 @@ class AudioManager:
         ]
     
     # ==========================================
-    # TTS - TEXT TO SPEECH
+    # TTS - gTTS (Google Text-to-Speech)
     # ==========================================
     
     def text_to_speech(self, text: str) -> AudioResult:
-        """Convertit le texte en audio."""
-        if not ELEVENLABS_OK or not self.client:
-            return AudioResult(success=False, error="ElevenLabs non configuré")
+        """Convertit le texte en audio avec gTTS."""
+        if not GTTS_OK:
+            return AudioResult(success=False, error="gTTS non installé")
         
         clean_text = self._clean_text(text)
         
@@ -128,7 +136,7 @@ class AudioManager:
         
         try:
             # Cache
-            cache_key = f"{self.voice_id}:{hash(clean_text)}"
+            cache_key = f"{self.voice_key}:{hash(clean_text)}"
             if cache_key in self._cache:
                 return AudioResult(success=True, audio_bytes=self._cache[cache_key])
             
@@ -136,83 +144,79 @@ class AudioManager:
             if len(clean_text) > 5000:
                 clean_text = clean_text[:5000]
             
-            # Génère l'audio avec le modèle multilingual (plus stable)
-            audio_generator = self.client.text_to_speech.convert(
+            # Paramètres de la voix
+            voice_config = VOICE_OPTIONS[self.voice_key]
+            
+            # Génère l'audio avec gTTS
+            tts = gTTS(
                 text=clean_text,
-                voice_id=self.voice_id,
-                model_id="eleven_multilingual_v2",
-                output_format="mp3_44100_128",
+                lang=voice_config["lang"],
+                tld=voice_config.get("tld", "fr"),
+                slow=voice_config.get("slow", False)
             )
             
-            # Convertit en bytes
-            audio_bytes = b"".join(audio_generator)
+            # Sauvegarde dans un buffer mémoire
+            audio_buffer = io.BytesIO()
+            tts.write_to_fp(audio_buffer)
+            audio_buffer.seek(0)
+            audio_bytes = audio_buffer.read()
             
             if audio_bytes and len(audio_bytes) > 0:
                 self._cache[cache_key] = audio_bytes
                 return AudioResult(success=True, audio_bytes=audio_bytes)
             else:
-                return AudioResult(success=False, error="Audio vide généré")
+                return AudioResult(success=False, error="Audio vide")
                 
         except Exception as e:
-            error_str = str(e)
-            
-            # Analyse l'erreur
-            if "quota" in error_str.lower() or "limit" in error_str.lower():
-                return AudioResult(success=False, error="Quota ElevenLabs épuisé")
-            elif "unauthorized" in error_str.lower() or "401" in error_str:
-                return AudioResult(success=False, error="Clé ElevenLabs invalide")
-            elif "voice" in error_str.lower() and "not found" in error_str.lower():
-                return AudioResult(success=False, error="Voix non trouvée")
-            elif "model" in error_str.lower():
-                return AudioResult(success=False, error="Modèle non disponible")
-            else:
-                # Affiche l'erreur complète pour debug
-                print(f"DEBUG TTS Error: {error_str}")
-                return AudioResult(success=False, error="Erreur TTS - Vérifiez vos crédits ElevenLabs")
+            return AudioResult(success=False, error=f"Erreur TTS: {str(e)[:100]}")
     
     # ==========================================
-    # STT - SPEECH TO TEXT
+    # STT - Groq Whisper (Fonctionne déjà ✅)
     # ==========================================
     
     def speech_to_text(self, audio_bytes: bytes) -> AudioResult:
-        """Transcrit l'audio en texte."""
-        if not ELEVENLABS_OK or not self.client:
-            return AudioResult(success=False, error="ElevenLabs non configuré")
+        """Transcrit l'audio avec Groq Whisper."""
+        if not GROQ_OK or not groq_client:
+            return AudioResult(success=False, error="Groq non configuré")
         
-        if not audio_bytes:
-            return AudioResult(success=False, error="Audio vide")
-        
-        if len(audio_bytes) < 1000:
+        if not audio_bytes or len(audio_bytes) < 1000:
             return AudioResult(success=False, error="Audio trop court")
         
         try:
-            audio_file = io.BytesIO(audio_bytes)
-            audio_file.name = "recording.webm"
+            # Fichier temporaire
+            with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+                tmp.write(audio_bytes)
+                tmp_path = tmp.name
             
-            result = self.client.speech_to_text.convert(
-                file=audio_file,
-                model_id="scribe_v1",
-                language_code="fra"
-            )
-            
-            if hasattr(result, 'text'):
-                text = result.text.strip()
-            else:
-                text = str(result).strip()
-            
-            if text and len(text) > 0:
-                return AudioResult(success=True, text=text)
-            else:
-                return AudioResult(success=False, error="Aucune parole détectée")
+            try:
+                # Transcription avec Groq Whisper
+                with open(tmp_path, "rb") as audio_file:
+                    transcription = groq_client.audio.transcriptions.create(
+                        model="whisper-large-v3",
+                        file=audio_file,
+                        language="fr",
+                        response_format="text"
+                    )
                 
+                # Extrait le texte
+                if isinstance(transcription, str):
+                    text = transcription.strip()
+                else:
+                    text = str(transcription).strip()
+                
+                if text:
+                    return AudioResult(success=True, text=text)
+                else:
+                    return AudioResult(success=False, error="Aucune parole détectée")
+                    
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except:
+                    pass
+                    
         except Exception as e:
-            error_str = str(e)
-            print(f"DEBUG STT Error: {error_str}")
-            
-            if "Could not process" in error_str:
-                return AudioResult(success=False, error="Format audio non reconnu")
-            else:
-                return AudioResult(success=False, error="Erreur transcription")
+            return AudioResult(success=False, error=f"Erreur STT: {str(e)[:100]}")
     
     # ==========================================
     # UTILITAIRES
@@ -226,6 +230,9 @@ class AudioManager:
         text = re.sub(r'[*_#]+', '', text)
         text = re.sub(r'\s+', ' ', text)
         return text.strip()
+    
+    def clear_cache(self):
+        self._cache.clear()
 
 
 # ============================================
@@ -233,32 +240,50 @@ class AudioManager:
 # ============================================
 
 if __name__ == "__main__":
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
     print("   TEST AUDIO MANAGER")
-    print("=" * 60 + "\n")
+    print("=" * 70 + "\n")
     
-    print(f"ElevenLabs: {'✅ OK' if ELEVENLABS_OK else '❌ Non configuré'}")
+    print(f"gTTS: {'✅ OK' if GTTS_OK else '❌ Non installé'}")
+    print(f"Groq Whisper: {'✅ OK' if GROQ_OK else '❌ Non configuré'}")
     
-    if ELEVENLABS_OK:
+    if GTTS_OK:
         print("\n📢 Voix disponibles:")
         for voice in AudioManager.get_voices():
-            print(f"   • {voice['name']} ({voice['key']})")
+            print(f"   • {voice['name']}")
         
-        print("\n🧪 Test TTS...")
+        print("\n🧪 Test TTS (gTTS)...")
         try:
+            import time
             mgr = AudioManager()
-            result = mgr.text_to_speech("Bonjour, ceci est un test.")
+            
+            start = time.time()
+            result = mgr.text_to_speech(
+                "Bonjour, je suis le narrateur de votre aventure. "
+                "Bienvenue dans le monde d'Hero IA."
+            )
+            duration = time.time() - start
             
             if result.success:
                 print(f"   ✅ Audio généré: {len(result.audio_bytes)} bytes")
+                print(f"   ⏱️  Temps: {duration:.2f} secondes")
                 
-                # Sauvegarde pour vérifier
-                with open("test_audio.mp3", "wb") as f:
+                # Sauvegarde pour test
+                with open("test_gtts_audio.mp3", "wb") as f:
                     f.write(result.audio_bytes)
-                print("   📁 Sauvegardé: test_audio.mp3")
+                print("   📁 Sauvegardé: test_gtts_audio.mp3")
+                print("   🎧 Écoutez-le pour vérifier la qualité !")
             else:
                 print(f"   ❌ Erreur: {result.error}")
+                
         except Exception as e:
             print(f"   ❌ Exception: {e}")
+            import traceback
+            traceback.print_exc()
     
-    print("\n" + "=" * 60 + "\n")
+    if GROQ_OK:
+        print("\n✅ STT (Groq Whisper) fonctionne déjà parfaitement")
+    
+    print("\n" + "=" * 70)
+    print("💰 COÛT: 0€ (100% GRATUIT)")
+    print("=" * 70 + "\n")
