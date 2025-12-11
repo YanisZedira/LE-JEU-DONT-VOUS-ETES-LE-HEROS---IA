@@ -1,5 +1,6 @@
 # ============================================
 # HERO IA - Audio Manager (TTS + STT)
+# ElevenLabs - Version Corrigée
 # ============================================
 
 import os
@@ -10,23 +11,40 @@ from typing import Optional, Dict, List
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
+
+# Charge le .env
 env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
+# ============================================
+# VÉRIFICATION ELEVENLABS
+# ============================================
+
 ELEVENLABS_OK = False
+elevenlabs_client = None
+
 try:
     from elevenlabs.client import ElevenLabs
     from elevenlabs import VoiceSettings
     
     api_key = os.getenv("ELEVEN_LABS_KEY")
+    
     if api_key:
+        elevenlabs_client = ElevenLabs(api_key=api_key)
         ELEVENLABS_OK = True
         print("✅ ElevenLabs (TTS/STT) configuré")
     else:
-        print("⚠️ ELEVEN_LABS_KEY manquante")
+        print("⚠️ ELEVEN_LABS_KEY manquante dans .env")
+        
 except ImportError:
-    print("⚠️ pip install elevenlabs")
+    print("⚠️ ElevenLabs non installé : pip install elevenlabs")
+except Exception as e:
+    print(f"⚠️ Erreur ElevenLabs : {e}")
 
+
+# ============================================
+# DATA CLASSES
+# ============================================
 
 @dataclass
 class AudioResult:
@@ -36,73 +54,138 @@ class AudioResult:
     error: Optional[str] = None
 
 
+# ============================================
+# VOIX DISPONIBLES
+# ============================================
+
+VOICE_OPTIONS = {
+    "adam": {
+        "name": "Adam (Narrateur)",
+        "id": "pNInz6obpgDQGcFmaJgB"
+    },
+    "arnold": {
+        "name": "Arnold (Grave)",
+        "id": "VR6AewLTigWG4xSOukaG"
+    },
+    "bella": {
+        "name": "Bella (Féminin)",
+        "id": "EXAVITQu4vr4xnSDxMaL"
+    },
+    "josh": {
+        "name": "Josh (Dynamique)",
+        "id": "TxGEqnHWrfWFTfGW9XjX"
+    },
+    "rachel": {
+        "name": "Rachel (Doux)",
+        "id": "21m00Tcm4TlvDq8ikWAM"
+    },
+}
+
+
+# ============================================
+# AUDIO MANAGER CLASS
+# ============================================
+
 class AudioManager:
-    
-    VOICES = {
-        "adam": {"name": "Adam (Narrateur)", "id": "pNInz6obpgDQGcFmaJgB"},
-        "arnold": {"name": "Arnold (Grave)", "id": "VR6AewLTigWG4xSOukaG"},
-        "bella": {"name": "Bella (Féminin)", "id": "EXAVITQu4vr4xnSDxMaL"},
-        "josh": {"name": "Josh (Dynamique)", "id": "TxGEqnHWrfWFTfGW9XjX"},
-        "rachel": {"name": "Rachel (Doux)", "id": "21m00Tcm4TlvDq8ikWAM"},
-    }
+    """Gestionnaire Audio - TTS et STT via ElevenLabs."""
     
     def __init__(self):
         if not ELEVENLABS_OK:
             raise ImportError("ElevenLabs non configuré")
         
-        api_key = os.getenv("ELEVEN_LABS_KEY")
-        self.client = ElevenLabs(api_key=api_key)
-        self.voice_id = self.VOICES["adam"]["id"]
+        self.client = elevenlabs_client
+        self.voice_id = VOICE_OPTIONS["adam"]["id"]
         self.voice_key = "adam"
         self._cache: Dict[str, bytes] = {}
     
-    def set_voice(self, key: str):
-        if key in self.VOICES:
-            self.voice_id = self.VOICES[key]["id"]
+    def set_voice(self, key: str) -> bool:
+        if key in VOICE_OPTIONS:
+            self.voice_id = VOICE_OPTIONS[key]["id"]
             self.voice_key = key
+            return True
+        return False
     
     @classmethod
     def get_voices(cls) -> List[Dict]:
-        return [{"key": k, "name": v["name"]} for k, v in cls.VOICES.items()]
+        return [
+            {"key": key, "name": voice["name"]} 
+            for key, voice in VOICE_OPTIONS.items()
+        ]
+    
+    # ==========================================
+    # TTS - TEXT TO SPEECH
+    # ==========================================
     
     def text_to_speech(self, text: str) -> AudioResult:
+        """Convertit le texte en audio."""
+        if not ELEVENLABS_OK or not self.client:
+            return AudioResult(success=False, error="ElevenLabs non configuré")
+        
+        clean_text = self._clean_text(text)
+        
+        if len(clean_text) < 3:
+            return AudioResult(success=False, error="Texte trop court")
+        
         try:
-            clean = self._clean_text(text)
-            if len(clean) < 3:
-                return AudioResult(success=False, error="Texte trop court")
-            
-            cache_key = f"{self.voice_id}:{hash(clean)}"
+            # Cache
+            cache_key = f"{self.voice_id}:{hash(clean_text)}"
             if cache_key in self._cache:
                 return AudioResult(success=True, audio_bytes=self._cache[cache_key])
             
+            # Limite longueur
+            if len(clean_text) > 5000:
+                clean_text = clean_text[:5000]
+            
+            # Génère l'audio avec le modèle multilingual (plus stable)
             audio_generator = self.client.text_to_speech.convert(
-                text=clean[:5000],
+                text=clean_text,
                 voice_id=self.voice_id,
-                model_id="eleven_flash_v2_5",
-                voice_settings=VoiceSettings(
-                    stability=0.5,
-                    similarity_boost=0.75,
-                    style=0.0,
-                    use_speaker_boost=True
-                )
+                model_id="eleven_multilingual_v2",
+                output_format="mp3_44100_128",
             )
             
+            # Convertit en bytes
             audio_bytes = b"".join(audio_generator)
             
-            if audio_bytes:
+            if audio_bytes and len(audio_bytes) > 0:
                 self._cache[cache_key] = audio_bytes
                 return AudioResult(success=True, audio_bytes=audio_bytes)
-            
-            return AudioResult(success=False, error="Audio vide")
-            
+            else:
+                return AudioResult(success=False, error="Audio vide généré")
+                
         except Exception as e:
-            return AudioResult(success=False, error=str(e)[:100])
+            error_str = str(e)
+            
+            # Analyse l'erreur
+            if "quota" in error_str.lower() or "limit" in error_str.lower():
+                return AudioResult(success=False, error="Quota ElevenLabs épuisé")
+            elif "unauthorized" in error_str.lower() or "401" in error_str:
+                return AudioResult(success=False, error="Clé ElevenLabs invalide")
+            elif "voice" in error_str.lower() and "not found" in error_str.lower():
+                return AudioResult(success=False, error="Voix non trouvée")
+            elif "model" in error_str.lower():
+                return AudioResult(success=False, error="Modèle non disponible")
+            else:
+                # Affiche l'erreur complète pour debug
+                print(f"DEBUG TTS Error: {error_str}")
+                return AudioResult(success=False, error="Erreur TTS - Vérifiez vos crédits ElevenLabs")
+    
+    # ==========================================
+    # STT - SPEECH TO TEXT
+    # ==========================================
     
     def speech_to_text(self, audio_bytes: bytes) -> AudioResult:
+        """Transcrit l'audio en texte."""
+        if not ELEVENLABS_OK or not self.client:
+            return AudioResult(success=False, error="ElevenLabs non configuré")
+        
+        if not audio_bytes:
+            return AudioResult(success=False, error="Audio vide")
+        
+        if len(audio_bytes) < 1000:
+            return AudioResult(success=False, error="Audio trop court")
+        
         try:
-            if not audio_bytes or len(audio_bytes) < 1000:
-                return AudioResult(success=False, error="Audio trop court")
-            
             audio_file = io.BytesIO(audio_bytes)
             audio_file.name = "recording.webm"
             
@@ -117,13 +200,23 @@ class AudioManager:
             else:
                 text = str(result).strip()
             
-            if text:
+            if text and len(text) > 0:
                 return AudioResult(success=True, text=text)
-            
-            return AudioResult(success=False, error="Aucune parole détectée")
-            
+            else:
+                return AudioResult(success=False, error="Aucune parole détectée")
+                
         except Exception as e:
-            return AudioResult(success=False, error=str(e)[:100])
+            error_str = str(e)
+            print(f"DEBUG STT Error: {error_str}")
+            
+            if "Could not process" in error_str:
+                return AudioResult(success=False, error="Format audio non reconnu")
+            else:
+                return AudioResult(success=False, error="Erreur transcription")
+    
+    # ==========================================
+    # UTILITAIRES
+    # ==========================================
     
     def _clean_text(self, text: str) -> str:
         if not text:
@@ -133,3 +226,39 @@ class AudioManager:
         text = re.sub(r'[*_#]+', '', text)
         text = re.sub(r'\s+', ' ', text)
         return text.strip()
+
+
+# ============================================
+# TEST
+# ============================================
+
+if __name__ == "__main__":
+    print("\n" + "=" * 60)
+    print("   TEST AUDIO MANAGER")
+    print("=" * 60 + "\n")
+    
+    print(f"ElevenLabs: {'✅ OK' if ELEVENLABS_OK else '❌ Non configuré'}")
+    
+    if ELEVENLABS_OK:
+        print("\n📢 Voix disponibles:")
+        for voice in AudioManager.get_voices():
+            print(f"   • {voice['name']} ({voice['key']})")
+        
+        print("\n🧪 Test TTS...")
+        try:
+            mgr = AudioManager()
+            result = mgr.text_to_speech("Bonjour, ceci est un test.")
+            
+            if result.success:
+                print(f"   ✅ Audio généré: {len(result.audio_bytes)} bytes")
+                
+                # Sauvegarde pour vérifier
+                with open("test_audio.mp3", "wb") as f:
+                    f.write(result.audio_bytes)
+                print("   📁 Sauvegardé: test_audio.mp3")
+            else:
+                print(f"   ❌ Erreur: {result.error}")
+        except Exception as e:
+            print(f"   ❌ Exception: {e}")
+    
+    print("\n" + "=" * 60 + "\n")
