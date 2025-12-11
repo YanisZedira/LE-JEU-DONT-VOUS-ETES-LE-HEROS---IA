@@ -1,0 +1,707 @@
+/* ============================================
+   HERO IA - Feuille de Style Multi-Thèmes
+   ============================================
+   Version 2.0 - Support thèmes dynamiques
+   Les variables CSS sont injectées par Python
+   ============================================ */
+
+/* ============================================
+   1. IMPORTS & POLICES
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;600;700&family=Merriweather:wght@400;700&display=swap');
+
+/* ============================================
+   2. VARIABLES PAR DÉFAUT (Thème Sombre)
+   Ces variables sont remplacées dynamiquement
+   ============================================ */
+
+:root {
+    /* Couleurs principales */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-card: #16161f;
+    
+    /* Texte */
+    --text-primary: #f0f0f5;
+    --text-secondary: #a0a0b0;
+    --text-muted: #606070;
+    
+    /* Accents */
+    --accent-primary: #d4af37;
+    --accent-secondary: #8b5cf6;
+    --accent-success: #22c55e;
+    --accent-danger: #ef4444;
+    --accent-warning: #f59e0b;
+    
+    /* Bordures et ombres */
+    --border-color: rgba(255, 255, 255, 0.08);
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    
+    /* Messages */
+    --narrator-bg: linear-gradient(135deg, #16161f 0%, #1a1a25 100%);
+    --narrator-border: #d4af37;
+    --narrator-text: #f0f0f5;
+    --player-bg: rgba(0, 255, 170, 0.08);
+    --player-border: #00ffaa;
+    --player-text: #a0a0b0;
+    
+    /* Typographie */
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-title: 'Cinzel', serif;
+    --font-book: 'Merriweather', Georgia, serif;
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-medium: 0.3s ease;
+    
+    /* Dimensions */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+}
+
+/* ============================================
+   3. RESET & BASE STREAMLIT
+   ============================================ */
+
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+.stDeployButton {display: none;}
+
+.stApp {
+    background: var(--bg-primary);
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    transition: background var(--transition-medium), color var(--transition-medium);
+}
+
+/* Fond spécial pour le thème Livre */
+.stApp.theme-book {
+    background-image: 
+        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"),
+        linear-gradient(to bottom, #f4e4c1 0%, #e8d4a8 50%, #f4e4c1 100%);
+    background-attachment: fixed;
+}
+
+.stApp.theme-book::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-shadow: inset 0 0 150px rgba(139, 69, 19, 0.15);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ============================================
+   4. TYPOGRAPHIE
+   ============================================ */
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-title);
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+p, span, li {
+    font-family: var(--font-body);
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+/* Style livre pour le texte narratif */
+.theme-book p,
+.theme-book .story-text {
+    font-family: var(--font-book);
+    font-size: 1.05rem;
+    line-height: 1.9;
+}
+
+/* ============================================
+   5. SIDEBAR
+   ============================================ */
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    border-right: 1px solid var(--border-color);
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    padding: 1.5rem 1rem;
+}
+
+.sidebar-title {
+    font-family: var(--font-title);
+    font-size: 1.3rem;
+    color: var(--accent-primary);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-section {
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.sidebar-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+/* ============================================
+   6. SÉLECTEUR DE THÈME
+   ============================================ */
+
+.theme-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.theme-btn {
+    flex: 1 1 calc(50% - 0.25rem);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+}
+
+.theme-btn:hover {
+    border-color: var(--accent-primary);
+    background: var(--bg-secondary);
+}
+
+.theme-btn.active {
+    border-color: var(--accent-primary);
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+/* ============================================
+   7. BARRE DE VIE (HP BAR)
+   ============================================ */
+
+.hp-container {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.hp-bar-wrapper {
+    background: rgba(128, 128, 128, 0.2);
+    border-radius: 50px;
+    height: 24px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border-color);
+}
+
+.hp-bar {
+    height: 100%;
+    border-radius: 50px;
+    transition: width 0.5s ease, background 0.5s ease;
+    position: relative;
+}
+
+.hp-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
+    border-radius: 50px 50px 0 0;
+}
+
+.hp-bar.hp-high {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+}
+
+.hp-bar.hp-medium {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+}
+
+.hp-bar.hp-low {
+    background: linear-gradient(90deg, #f97316, #fb923c);
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.5);
+}
+
+.hp-bar.hp-critical {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    animation: pulse-critical 1s infinite;
+}
+
+@keyframes pulse-critical {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.hp-text {
+    text-align: center;
+    margin-top: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+/* ============================================
+   8. INVENTAIRE
+   ============================================ */
+
+.inventory-container {
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.inventory-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    margin: 0.25rem 0;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: var(--transition-fast);
+    border-left: 3px solid var(--accent-primary);
+}
+
+.inventory-item:hover {
+    transform: translateX(3px);
+}
+
+.inventory-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
+/* ============================================
+   9. ZONE DE CHAT / HISTOIRE
+   ============================================ */
+
+.story-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-primary) var(--bg-secondary);
+}
+
+.story-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.story-container::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+.story-container::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+/* Message du narrateur */
+.message-narrator {
+    background: var(--narrator-bg);
+    border-left: 4px solid var(--narrator-border);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    position: relative;
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+.message-narrator::before {
+    content: '📜';
+    position: absolute;
+    top: -12px;
+    left: 12px;
+    background: var(--bg-primary);
+    padding: 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.message-narrator .story-text {
+    color: var(--narrator-text);
+    font-size: 1.05rem;
+    margin: 0;
+    line-height: 1.9;
+}
+
+/* Paragraphes dans la narration */
+.message-narrator .story-text p {
+    margin-bottom: 1rem;
+    color: var(--narrator-text);
+}
+
+.message-narrator .story-text p:last-child {
+    margin-bottom: 0;
+}
+
+/* Message du joueur */
+.message-player {
+    background: var(--player-bg);
+    border-left: 4px solid var(--player-border);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+}
+
+.message-player .player-label {
+    color: var(--player-border);
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.message-player .player-text {
+    color: var(--player-text);
+}
+
+/* Indicateur de scène */
+.scene-indicator {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid var(--accent-secondary);
+    border-radius: 50px;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    color: var(--accent-secondary);
+    margin-bottom: 1rem;
+}
+
+/* ============================================
+   10. BOUTONS D'ACTION RPG
+   ============================================ */
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+}
+
+.stButton > button {
+    width: 100%;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.stButton > button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(var(--accent-primary), 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.stButton > button:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px var(--shadow-color);
+}
+
+.stButton > button:hover::before {
+    left: 100%;
+}
+
+.stButton > button[kind="primary"] {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    border: none;
+    font-weight: 600;
+}
+
+.stButton > button[kind="primary"]:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 5px 25px var(--shadow-color);
+}
+
+/* ============================================
+   11. ZONE DE SAISIE
+   ============================================ */
+
+[data-testid="stChatInput"] {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+[data-testid="stChatInput"]:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 15px var(--shadow-color);
+}
+
+[data-testid="stChatInput"] textarea {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-body) !important;
+}
+
+.stTextArea textarea {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+}
+
+.stTextArea textarea:focus {
+    border-color: var(--accent-primary) !important;
+}
+
+/* Zone bloquée */
+.input-blocked textarea {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-color: var(--accent-danger) !important;
+    animation: blink-blocked 1s infinite;
+}
+
+@keyframes blink-blocked {
+    0%, 100% { border-color: var(--accent-danger); }
+    50% { border-color: rgba(239, 68, 68, 0.3); }
+}
+
+/* ============================================
+   12. ÉCRANS SPÉCIAUX
+   ============================================ */
+
+.game-over-screen,
+.victory-screen {
+    text-align: center;
+    padding: 3rem 0;
+}
+
+.game-over-title {
+    font-family: var(--font-title);
+    font-size: 3.5rem;
+    color: var(--accent-danger);
+    text-shadow: 0 0 50px rgba(239, 68, 68, 0.5);
+    margin-bottom: 1rem;
+    animation: pulse 2s infinite;
+}
+
+.victory-title {
+    font-family: var(--font-title);
+    font-size: 3.5rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+    animation: glow 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+}
+
+@keyframes glow {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.2); }
+}
+
+.end-message {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ============================================
+   13. CARTES DE THÈMES DE JEU
+   ============================================ */
+
+.theme-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.theme-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent-primary);
+    box-shadow: 0 10px 40px var(--shadow-color);
+}
+
+.theme-card:hover::before {
+    opacity: 1;
+}
+
+.theme-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.theme-name {
+    font-family: var(--font-title);
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.theme-description {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* ============================================
+   14. ALERTES
+   ============================================ */
+
+.warning-box {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid var(--accent-warning);
+    border-left: 4px solid var(--accent-warning);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.blocked-warning {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--accent-danger);
+    border-left: 4px solid var(--accent-danger);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin: 1rem 0;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% { border-color: rgba(239, 68, 68, 0.5); }
+    50% { border-color: var(--accent-danger); }
+}
+
+/* ============================================
+   15. ANIMATIONS
+   ============================================ */
+
+.fade-in {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   16. RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    .message-narrator,
+    .message-player {
+        padding: 1rem;
+    }
+    
+    .theme-selector {
+        flex-direction: column;
+    }
+    
+    .theme-btn {
+        flex: 1 1 100%;
+    }
+}
+
+/* ============================================
+   17. ÉLÉMENTS STREAMLIT PERSONNALISÉS
+   ============================================ */
+
+/* Select box */
+.stSelectbox > div > div {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* Radio buttons */
+.stRadio > div {
+    background: var(--bg-card);
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+}
+
+/* Dividers */
+hr {
+    border-color: var(--border-color);
+}
