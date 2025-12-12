@@ -1,13 +1,11 @@
-# ============================================
-# DIAGNOSTIC COMPLET - Audio Manager
-# ============================================
+
 
 import os
 import io
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Charge .env
+
 env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
@@ -15,9 +13,6 @@ print("\n" + "=" * 60)
 print("   DIAGNOSTIC COMPLET AUDIO")
 print("=" * 60)
 
-# ============================================
-# 1. VÉRIFICATION CLÉ API
-# ============================================
 
 print("\n1️⃣ VÉRIFICATION CLÉ API")
 print("-" * 40)
@@ -29,9 +24,7 @@ else:
     print("   ❌ ELEVEN_LABS_KEY non trouvée dans .env")
     exit()
 
-# ============================================
-# 2. IMPORT ELEVENLABS
-# ============================================
+
 
 print("\n2️⃣ IMPORT ELEVENLABS")
 print("-" * 40)
@@ -45,9 +38,7 @@ except ImportError as e:
     print("   → pip install elevenlabs")
     exit()
 
-# ============================================
-# 3. CONNEXION CLIENT
-# ============================================
+
 
 print("\n3️⃣ CONNEXION CLIENT")
 print("-" * 40)
@@ -59,10 +50,6 @@ except Exception as e:
     print(f"   ❌ Erreur: {e}")
     exit()
 
-# ============================================
-# 4. TEST TTS (Text-to-Speech)
-# ============================================
-
 print("\n4️⃣ TEST TTS (Text-to-Speech)")
 print("-" * 40)
 
@@ -71,7 +58,7 @@ try:
     
     audio_generator = client.text_to_speech.convert(
         text="Bonjour, ceci est un test du système audio.",
-        voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel
+        voice_id="21m00Tcm4TlvDq8ikWAM",
         model_id="eleven_multilingual_v2",
         output_format="mp3_44100_128",
     )
@@ -81,7 +68,7 @@ try:
     if audio_bytes and len(audio_bytes) > 0:
         print(f"   ✅ TTS OK - Audio généré: {len(audio_bytes)} bytes")
         
-        # Sauvegarde pour test STT
+        
         with open("test_tts_output.mp3", "wb") as f:
             f.write(audio_bytes)
         print("   📁 Sauvegardé: test_tts_output.mp3")
@@ -95,9 +82,7 @@ except Exception as e:
     print(f"   ❌ Erreur TTS: {e}")
     tts_audio = None
 
-# ============================================
-# 5. TEST STT (Speech-to-Text) avec fichier TTS
-# ============================================
+
 
 print("\n5️⃣ TEST STT (Speech-to-Text)")
 print("-" * 40)
@@ -115,7 +100,7 @@ if tts_audio:
             language_code="fra"
         )
         
-        # Affiche le résultat brut
+        
         print(f"   📋 Résultat brut: {type(result)}")
         print(f"   📋 Contenu: {result}")
         
@@ -129,16 +114,14 @@ if tts_audio:
         print(f"   ❌ Erreur STT: {e}")
         print(f"   📋 Type erreur: {type(e).__name__}")
         
-        # Affiche l'erreur complète
+        
         import traceback
         print("\n   📋 Traceback complet:")
         traceback.print_exc()
 else:
     print("   ⏭️ Ignoré (pas d'audio TTS)")
 
-# ============================================
-# 6. TEST STT avec format webm simulé
-# ============================================
+
 
 print("\n6️⃣ TEST FORMAT WEBM")
 print("-" * 40)
@@ -148,7 +131,7 @@ if tts_audio:
         print("   ⏳ Test avec extension .webm...")
         
         audio_file = io.BytesIO(tts_audio)
-        audio_file.name = "recording.webm"  # Comme le micro Streamlit
+        audio_file.name = "recording.webm"  
         
         result = client.speech_to_text.convert(
             file=audio_file,
@@ -164,15 +147,12 @@ if tts_audio:
     except Exception as e:
         print(f"   ❌ Erreur format webm: {e}")
 
-# ============================================
-# 7. VÉRIFICATION COMPTE ELEVENLABS
-# ============================================
 
 print("\n7️⃣ VÉRIFICATION COMPTE")
 print("-" * 40)
 
 try:
-    # Essaie de récupérer les infos du compte
+    
     user = client.user.get()
     print(f"   ✅ Compte actif")
     
@@ -185,9 +165,7 @@ try:
 except Exception as e:
     print(f"   ⚠️ Impossible de vérifier le compte: {e}")
 
-# ============================================
-# RÉSUMÉ
-# ============================================
+
 
 print("\n" + "=" * 60)
 print("   RÉSUMÉ")

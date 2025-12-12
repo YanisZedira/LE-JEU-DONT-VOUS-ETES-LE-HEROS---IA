@@ -1,7 +1,4 @@
-# ============================================
-# HERO IA - Composants UI Vocaux
-# Interface utilisateur pour le mode vocal
-# ============================================
+
 
 import streamlit as st
 
@@ -276,9 +273,7 @@ def show_processing():
     """, unsafe_allow_html=True)
 
 
-# ============================================
-# TEST
-# ============================================
+
 
 if __name__ == "__main__":
     print("\n" + "=" * 50)

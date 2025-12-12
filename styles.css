@@ -1,44 +1,32 @@
-/* ============================================
-   HERO IA - Feuille de Style Multi-Thèmes
-   ============================================
-   Version 2.0 - Support thèmes dynamiques
-   Les variables CSS sont injectées par Python
-   ============================================ */
 
-/* ============================================
-   1. IMPORTS & POLICES
-   ============================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;600;700&family=Merriweather:wght@400;700&display=swap');
 
-/* ============================================
-   2. VARIABLES PAR DÉFAUT (Thème Sombre)
-   Ces variables sont remplacées dynamiquement
-   ============================================ */
+
 
 :root {
-    /* Couleurs principales */
+    
     --bg-primary: #0a0a0f;
     --bg-secondary: #12121a;
     --bg-card: #16161f;
     
-    /* Texte */
+    
     --text-primary: #f0f0f5;
     --text-secondary: #a0a0b0;
     --text-muted: #606070;
     
-    /* Accents */
+    
     --accent-primary: #d4af37;
     --accent-secondary: #8b5cf6;
     --accent-success: #22c55e;
     --accent-danger: #ef4444;
     --accent-warning: #f59e0b;
     
-    /* Bordures et ombres */
+    
     --border-color: rgba(255, 255, 255, 0.08);
     --shadow-color: rgba(0, 0, 0, 0.5);
     
-    /* Messages */
+    
     --narrator-bg: linear-gradient(135deg, #16161f 0%, #1a1a25 100%);
     --narrator-border: #d4af37;
     --narrator-text: #f0f0f5;
@@ -46,24 +34,21 @@
     --player-border: #00ffaa;
     --player-text: #a0a0b0;
     
-    /* Typographie */
+    
     --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-title: 'Cinzel', serif;
     --font-book: 'Merriweather', Georgia, serif;
     
-    /* Transitions */
+    
     --transition-fast: 0.15s ease;
     --transition-medium: 0.3s ease;
     
-    /* Dimensions */
+    
     --radius-sm: 6px;
     --radius-md: 12px;
     --radius-lg: 16px;
 }
 
-/* ============================================
-   3. RESET & BASE STREAMLIT
-   ============================================ */
 
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
@@ -77,7 +62,7 @@ header {visibility: hidden;}
     transition: background var(--transition-medium), color var(--transition-medium);
 }
 
-/* Fond spécial pour le thème Livre */
+
 .stApp.theme-book {
     background-image: 
         url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"),
@@ -97,9 +82,7 @@ header {visibility: hidden;}
     z-index: 0;
 }
 
-/* ============================================
-   4. TYPOGRAPHIE
-   ============================================ */
+
 
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-title);
@@ -122,7 +105,7 @@ p, span, li {
     line-height: 1.8;
 }
 
-/* Style livre pour le texte narratif */
+
 .theme-book p,
 .theme-book .story-text {
     font-family: var(--font-book);
@@ -130,9 +113,7 @@ p, span, li {
     line-height: 1.9;
 }
 
-/* ============================================
-   5. SIDEBAR
-   ============================================ */
+
 
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
@@ -170,9 +151,7 @@ p, span, li {
     margin-bottom: 0.75rem;
 }
 
-/* ============================================
-   6. SÉLECTEUR DE THÈME
-   ============================================ */
+
 
 .theme-selector {
     display: flex;
@@ -205,9 +184,7 @@ p, span, li {
     color: var(--bg-primary);
 }
 
-/* ============================================
-   7. BARRE DE VIE (HP BAR)
-   ============================================ */
+
 
 .hp-container {
     background: var(--bg-card);
@@ -278,9 +255,7 @@ p, span, li {
     color: var(--text-primary);
 }
 
-/* ============================================
-   8. INVENTAIRE
-   ============================================ */
+
 
 .inventory-container {
     background: var(--bg-card);
@@ -313,9 +288,7 @@ p, span, li {
     padding: 1rem;
 }
 
-/* ============================================
-   9. ZONE DE CHAT / HISTOIRE
-   ============================================ */
+
 
 .story-container {
     max-height: 60vh;
@@ -338,7 +311,6 @@ p, span, li {
     border-radius: 3px;
 }
 
-/* Message du narrateur */
 .message-narrator {
     background: var(--narrator-bg);
     border-left: 4px solid var(--narrator-border);
@@ -366,7 +338,7 @@ p, span, li {
     line-height: 1.9;
 }
 
-/* Paragraphes dans la narration */
+
 .message-narrator .story-text p {
     margin-bottom: 1rem;
     color: var(--narrator-text);
@@ -376,7 +348,7 @@ p, span, li {
     margin-bottom: 0;
 }
 
-/* Message du joueur */
+
 .message-player {
     background: var(--player-bg);
     border-left: 4px solid var(--player-border);
@@ -395,7 +367,7 @@ p, span, li {
     color: var(--player-text);
 }
 
-/* Indicateur de scène */
+
 .scene-indicator {
     display: inline-flex;
     align-items: center;
@@ -408,9 +380,7 @@ p, span, li {
     margin-bottom: 1rem;
 }
 
-/* ============================================
-   10. BOUTONS D'ACTION RPG
-   ============================================ */
+
 
 .actions-grid {
     display: grid;
@@ -468,9 +438,7 @@ p, span, li {
     box-shadow: 0 5px 25px var(--shadow-color);
 }
 
-/* ============================================
-   11. ZONE DE SAISIE
-   ============================================ */
+
 
 [data-testid="stChatInput"] {
     background: var(--bg-secondary);
@@ -500,7 +468,6 @@ p, span, li {
     border-color: var(--accent-primary) !important;
 }
 
-/* Zone bloquée */
 .input-blocked textarea {
     background: rgba(239, 68, 68, 0.1) !important;
     border-color: var(--accent-danger) !important;
@@ -512,9 +479,7 @@ p, span, li {
     50% { border-color: rgba(239, 68, 68, 0.3); }
 }
 
-/* ============================================
-   12. ÉCRANS SPÉCIAUX
-   ============================================ */
+
 
 .game-over-screen,
 .victory-screen {
@@ -560,9 +525,7 @@ p, span, li {
     margin-right: auto;
 }
 
-/* ============================================
-   13. CARTES DE THÈMES DE JEU
-   ============================================ */
+
 
 .theme-card {
     background: var(--bg-card);
@@ -615,9 +578,7 @@ p, span, li {
     line-height: 1.5;
 }
 
-/* ============================================
-   14. ALERTES
-   ============================================ */
+
 
 .warning-box {
     background: rgba(245, 158, 11, 0.1);
@@ -643,9 +604,7 @@ p, span, li {
     50% { border-color: var(--accent-danger); }
 }
 
-/* ============================================
-   15. ANIMATIONS
-   ============================================ */
+
 
 .fade-in {
     animation: fadeIn 0.5s ease;
@@ -656,9 +615,6 @@ p, span, li {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ============================================
-   16. RESPONSIVE
-   ============================================ */
 
 @media (max-width: 768px) {
     .actions-grid {
@@ -683,25 +639,21 @@ p, span, li {
     }
 }
 
-/* ============================================
-   17. ÉLÉMENTS STREAMLIT PERSONNALISÉS
-   ============================================ */
 
-/* Select box */
 .stSelectbox > div > div {
     background: var(--bg-card);
     border-color: var(--border-color);
     color: var(--text-primary);
 }
 
-/* Radio buttons */
+
 .stRadio > div {
     background: var(--bg-card);
     padding: 0.5rem;
     border-radius: var(--radius-md);
 }
 
-/* Dividers */
+
 hr {
     border-color: var(--border-color);
 }
