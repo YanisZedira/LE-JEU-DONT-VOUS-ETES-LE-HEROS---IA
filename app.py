@@ -10,10 +10,6 @@ from config import (
 )
 from game_agent import GameAgent, GameResponse
 
-# ============================================
-# IMPORTS
-# ============================================
-
 AUDIO_OK = False
 AudioManager = None
 try:
