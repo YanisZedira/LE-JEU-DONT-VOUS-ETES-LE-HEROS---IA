@@ -1,8 +1,3 @@
-# ============================================
-# HERO IA - Application Finale
-# Images dans historique + Bouton Sauvegarder
-# ============================================
-
 import streamlit as st
 from typing import Optional
 import re
