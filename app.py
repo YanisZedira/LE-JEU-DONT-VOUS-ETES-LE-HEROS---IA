@@ -46,9 +46,7 @@ try:
 except:
     pass
 
-# ============================================
-# CONFIG
-# ============================================
+
 
 st.set_page_config(
     page_title="HERO IA",
@@ -56,10 +54,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# ============================================
-# STATE
-# ============================================
 
 def init_state():
     defaults = {
