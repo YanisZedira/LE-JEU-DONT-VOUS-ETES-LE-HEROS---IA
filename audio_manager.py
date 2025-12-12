@@ -1,8 +1,3 @@
-# ============================================
-# HERO IA - Audio Manager (Version Stable)
-# TTS : gTTS (Google - Simple & Gratuit)
-# STT : Groq Whisper (Fonctionne déjà ✅)
-# ============================================
 
 import os
 import io
@@ -14,15 +9,11 @@ from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
-# Charge .env
 env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
-# ============================================
-# VÉRIFICATION DES SERVICES
-# ============================================
 
-# gTTS (Google TTS)
+
 GTTS_OK = False
 try:
     from gtts import gTTS
@@ -31,7 +22,6 @@ try:
 except ImportError:
     print("⚠️ gTTS non installé : pip install gtts")
 
-# Groq Whisper (STT)
 GROQ_OK = False
 groq_client = None
 try:
@@ -47,13 +37,9 @@ try:
 except ImportError:
     print("⚠️ groq non installé : pip install groq")
 
-# Pour compatibilité avec app.py
 ELEVENLABS_OK = GTTS_OK and GROQ_OK
 
 
-# ============================================
-# DATA CLASSES
-# ============================================
 
 @dataclass
 class AudioResult:
@@ -63,9 +49,6 @@ class AudioResult:
     error: Optional[str] = None
 
 
-# ============================================
-# VOIX gTTS (Accents Français)
-# ============================================
 
 VOICE_OPTIONS = {
     "fr": {
@@ -87,9 +70,6 @@ VOICE_OPTIONS = {
 }
 
 
-# ============================================
-# AUDIO MANAGER CLASS
-# ============================================
 
 class AudioManager:
     """
@@ -120,9 +100,7 @@ class AudioManager:
             for key, voice in VOICE_OPTIONS.items()
         ]
     
-    # ==========================================
-    # TTS - gTTS (Google Text-to-Speech)
-    # ==========================================
+
     
     def text_to_speech(self, text: str) -> AudioResult:
         """Convertit le texte en audio avec gTTS."""
@@ -135,19 +113,15 @@ class AudioManager:
             return AudioResult(success=False, error="Texte trop court")
         
         try:
-            # Cache
             cache_key = f"{self.voice_key}:{hash(clean_text)}"
             if cache_key in self._cache:
                 return AudioResult(success=True, audio_bytes=self._cache[cache_key])
             
-            # Limite longueur
             if len(clean_text) > 5000:
                 clean_text = clean_text[:5000]
             
-            # Paramètres de la voix
             voice_config = VOICE_OPTIONS[self.voice_key]
             
-            # Génère l'audio avec gTTS
             tts = gTTS(
                 text=clean_text,
                 lang=voice_config["lang"],
@@ -155,7 +129,6 @@ class AudioManager:
                 slow=voice_config.get("slow", False)
             )
             
-            # Sauvegarde dans un buffer mémoire
             audio_buffer = io.BytesIO()
             tts.write_to_fp(audio_buffer)
             audio_buffer.seek(0)
@@ -170,9 +143,7 @@ class AudioManager:
         except Exception as e:
             return AudioResult(success=False, error=f"Erreur TTS: {str(e)[:100]}")
     
-    # ==========================================
-    # STT - Groq Whisper (Fonctionne déjà ✅)
-    # ==========================================
+
     
     def speech_to_text(self, audio_bytes: bytes) -> AudioResult:
         """Transcrit l'audio avec Groq Whisper."""
@@ -183,13 +154,12 @@ class AudioManager:
             return AudioResult(success=False, error="Audio trop court")
         
         try:
-            # Fichier temporaire
+
             with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
                 tmp.write(audio_bytes)
                 tmp_path = tmp.name
             
             try:
-                # Transcription avec Groq Whisper
                 with open(tmp_path, "rb") as audio_file:
                     transcription = groq_client.audio.transcriptions.create(
                         model="whisper-large-v3",
@@ -198,7 +168,6 @@ class AudioManager:
                         response_format="text"
                     )
                 
-                # Extrait le texte
                 if isinstance(transcription, str):
                     text = transcription.strip()
                 else:
@@ -218,9 +187,7 @@ class AudioManager:
         except Exception as e:
             return AudioResult(success=False, error=f"Erreur STT: {str(e)[:100]}")
     
-    # ==========================================
-    # UTILITAIRES
-    # ==========================================
+
     
     def _clean_text(self, text: str) -> str:
         if not text:
@@ -235,9 +202,6 @@ class AudioManager:
         self._cache.clear()
 
 
-# ============================================
-# TEST
-# ============================================
 
 if __name__ == "__main__":
     print("\n" + "=" * 70)
@@ -268,7 +232,7 @@ if __name__ == "__main__":
                 print(f"   ✅ Audio généré: {len(result.audio_bytes)} bytes")
                 print(f"   ⏱️  Temps: {duration:.2f} secondes")
                 
-                # Sauvegarde pour test
+              
                 with open("test_gtts_audio.mp3", "wb") as f:
                     f.write(result.audio_bytes)
                 print("   📁 Sauvegardé: test_gtts_audio.mp3")

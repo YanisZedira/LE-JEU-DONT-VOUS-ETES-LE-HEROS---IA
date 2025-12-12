@@ -1,6 +1,4 @@
-# ============================================
-# HERO IA - Composants Audio pour Streamlit
-# ============================================
+
 """
 Composants audio custom pour Streamlit (version corrigée)
 - Enregistreur audio avec st.markdown + JavaScript
