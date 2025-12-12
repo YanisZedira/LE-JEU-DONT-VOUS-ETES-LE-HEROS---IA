@@ -1,6 +1,4 @@
-# ============================================
-# HERO IA - Configuration Centrale
-# ============================================
+
 
 import random
 import re
@@ -9,9 +7,6 @@ from typing import List, Optional, Dict, Any
 from enum import Enum
 
 
-# ============================================
-# CONFIGURATION LLM
-# ============================================
 
 class LLMConfig:
     """Configuration du modèle de langage."""
@@ -31,10 +26,6 @@ class LLMConfig:
     TOP_P: float = 0.9
 
 
-# ============================================
-# CONFIGURATION DU JEU
-# ============================================
-
 class GameConfig:
     """Constantes du gameplay."""
     
@@ -46,9 +37,6 @@ class GameConfig:
     DEFAULT_INVENTORY: List[str] = ["Sacoche en cuir", "Gourde d'eau", "Carte ancienne"]
 
 
-# ============================================
-# THÈMES DE JEU (SCÉNARIOS)
-# ============================================
 
 @dataclass
 class GameTheme:
@@ -62,7 +50,7 @@ class GameTheme:
     primary_color: str
     secondary_color: str
     ambient_keywords: List[str] = field(default_factory=list)
-    custom_inventory: Optional[List[str]] = None  # NOUVEAU
+    custom_inventory: Optional[List[str]] = None 
 
 
 class ThemeLibrary:
@@ -70,7 +58,6 @@ class ThemeLibrary:
     
     THEMES: Dict[str, GameTheme] = {
         
-        # ========== NOUVEAU : ORIENT-EXPRESS (DÉMO RAPIDE) ==========
         "orient_express": GameTheme(
             id="orient_express",
             name="Le Crime de l'Orient-Express",
@@ -126,7 +113,7 @@ Le train est bloqué par une avalanche - le meurtrier est À BORD.
             ]
         ),
         
-        # ========== THÈMES ORIGINAUX ==========
+
         
         "egypt": GameTheme(
             id="egypt",
@@ -217,9 +204,7 @@ Le train est bloqué par une avalanche - le meurtrier est À BORD.
         return list(cls.THEMES.values())
 
 
-# ============================================
-# THÈMES VISUELS (UI / APPARENCE)
-# ============================================
+
 
 @dataclass
 class VisualTheme:
@@ -347,9 +332,6 @@ class VisualThemeLibrary:
         return list(cls.THEMES.values())
 
 
-# ============================================
-# SYSTÈME DE DÉS
-# ============================================
 
 class DiceRoller:
     DICE_PATTERN = re.compile(r'^(\d+)d(\d+)([+-]\d+)?$')
@@ -384,9 +366,7 @@ class DiceRoller:
         }
 
 
-# ============================================
-# ÉNUMÉRATIONS
-# ============================================
+
 
 class GameStatus(Enum):
     MENU = "menu"
@@ -402,10 +382,6 @@ class InputQuality(Enum):
     BLOCKED = "blocked"
 
 
-# ============================================
-# MESSAGES SYSTÈME
-# ============================================
-
 class SystemMessages:
     WELCOME_TITLE = "⚔️ HERO IA"
     WELCOME_SUBTITLE = "Le Jeu de Rôle Textuel Infini"
@@ -419,9 +395,6 @@ class SystemMessages:
     LOADING = "Le destin tisse votre histoire..."
 
 
-# ============================================
-# FONCTIONS UTILITAIRES
-# ============================================
 
 def clamp(value: int, min_val: int, max_val: int) -> int:
     return max(min_val, min(value, max_val))

@@ -1,7 +1,4 @@
-# ============================================
-# HERO IA - Image Manager (Hugging Face - Gratuit)
-# Nouvelle API : router.huggingface.co
-# ============================================
+
 
 import os
 import requests
@@ -50,7 +47,7 @@ class ImageGenerator:
         self.api_key = HF_API_KEY
         self.current_style = "fantasy"
         
-        # Nouvelle URL de l'API Hugging Face
+        
         self.api_url = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell"
     
     def set_style(self, style: str):
@@ -63,7 +60,7 @@ class ImageGenerator:
             if not prompt or len(prompt.strip()) < 5:
                 return ImageResult(success=False, error="Prompt trop court")
             
-            # Enrichit le prompt
+            
             style_suffix = self.STYLES.get(self.current_style, self.STYLES["fantasy"])
             full_prompt = f"{prompt}, {style_suffix}"
             
@@ -75,7 +72,7 @@ class ImageGenerator:
                 "inputs": full_prompt,
             }
             
-            # Requête
+            
             response = requests.post(
                 self.api_url,
                 headers=headers,
@@ -84,10 +81,10 @@ class ImageGenerator:
             )
             
             if response.status_code == 200:
-                # L'API retourne les bytes de l'image
+                
                 image_bytes = response.content
                 
-                # Vérifie que c'est bien une image
+                
                 if image_bytes.startswith(b'{') or image_bytes.startswith(b'<'):
                     try:
                         error_data = response.json()
@@ -96,7 +93,7 @@ class ImageGenerator:
                     except:
                         return ImageResult(success=False, error="Réponse invalide")
                 
-                # Convertit en base64
+                
                 image_b64 = base64.b64encode(image_bytes).decode('utf-8')
                 
                 return ImageResult(success=True, image_base64=image_b64)
@@ -122,9 +119,7 @@ class ImageGenerator:
             return ImageResult(success=False, error=str(e)[:100])
 
 
-# ============================================
-# TEST
-# ============================================
+
 
 if __name__ == "__main__":
     print("\n" + "="*60)
